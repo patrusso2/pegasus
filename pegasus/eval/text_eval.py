@@ -27,6 +27,7 @@ import tensorflow as tf
 from rouge_score import rouge_scorer
 from rouge_score import scoring
 from tensorflow.contrib import summary as contrib_summary
+import pickle
 
 _ROUGE_METRIC = "rouge"
 _BLEU_METRIC = "bleu"
@@ -141,13 +142,14 @@ def text_eval(encoder,
   decode_fn = lambda x: ids2str(encoder, x, num_reserved)
   scorers_dict = {}
   scorers_dict[_ROUGE_METRIC] = rouge_scorer.RougeScorer(
-      ["rouge1", "rouge2", "rougeL", "rougeLsum"], use_stemmer=True)
+    ["rouge1", "rouge2", "rougeL", "rougeLsum"], use_stemmer=True)
   scorers_dict[_BLEU_METRIC] = bleu_scorer.BleuScorer()
   scorers_dict[_REPETITION_METRIC] = repetition_scorer.RepetitionScorer(
-      ["regs1", "regs2", "regs3", "regsTCR"])
+    ["regs1", "regs2", "regs3", "regsTCR"])
   scorers_dict[_LENGTH_METRIC] = length_scorer.LengthScorer(["word", "char"])
   aggregators_dict = {k: scoring.BootstrapAggregator() for k in scorers_dict}
 
+  list_of_text_dicts = []
   with LogWriter(additional_keys, model_dir, global_step, eval_tag,
                  enable_logging) as log_writer:
     for i, features in enumerate(features_iter):
@@ -164,9 +166,9 @@ def text_eval(encoder,
       targets = decode_fn(features[targets_key])
       preds = decode_fn(features[predictions_key])
       text_dict = {
-          "inputs": inputs_list,
-          "targets": targets,
-          "predictions": preds
+        "inputs": inputs_list,
+        "targets": targets,
+        "predictions": preds
       }
 
       for key in additional_keys:
@@ -177,6 +179,8 @@ def text_eval(encoder,
 
       log_writer.write(text_dict, i)
 
+      list_of_text_dicts.append(text_dict)
+
       for key, scorer in scorers_dict.items():
         scores_i = scorer.score(targets, preds)
         aggregators_dict[key].add_scores(scores_i)
@@ -186,6 +190,11 @@ def text_eval(encoder,
   _write_aggregates(model_dir, global_step, eval_tag, aggregates_dict,
                     length_histograms)
   _write_aggregate_summaries(model_dir, global_step, eval_tag, aggregates_dict)
+
+  with open(os.path.join(
+          model_dir, "list_of_text_dicts-{}-{}.pkl".format(global_step, eval_tag)),
+          'wb') as f:
+    pickle.dump(list_of_text_dicts, f)
 
 
 def _write_aggregates(model_dir, global_step, eval_tag, aggregates_dict,
