@@ -22,6 +22,7 @@ import numpy as np
 from pegasus.eval.bleu import bleu_scorer
 from pegasus.eval.length import length_scorer
 from pegasus.eval.repetition import repetition_scorer
+from pegasus.eval.extractive import extractive_scorer
 import tensorflow as tf
 
 from rouge_score import rouge_scorer
@@ -33,6 +34,8 @@ _ROUGE_METRIC = "rouge"
 _BLEU_METRIC = "bleu"
 _REPETITION_METRIC = "repetition"
 _LENGTH_METRIC = "length"
+_EXTRACTIVE_METRIC = "extractive"
+
 
 _LOG_EVERY_N = 100
 _LINE_SEPARATOR = "-----:"
@@ -147,6 +150,9 @@ def text_eval(encoder,
   scorers_dict[_REPETITION_METRIC] = repetition_scorer.RepetitionScorer(
     ["regs1", "regs2", "regs3", "regsTCR"])
   scorers_dict[_LENGTH_METRIC] = length_scorer.LengthScorer(["word", "char"])
+  scorers_dict[_EXTRACTIVE_METRIC] = extractive_scorer.ExtractiveScorer(
+    ["coverage", "density", "normalized_density"])
+
   aggregators_dict = {k: scoring.BootstrapAggregator() for k in scorers_dict}
 
   list_of_text_dicts = []
@@ -196,6 +202,10 @@ def text_eval(encoder,
           'wb') as f:
     pickle.dump(list_of_text_dicts, f)
 
+  with open(os.path.join(
+          model_dir, "text_metrics-{}-{}.pkl".format(global_step, eval_tag)),
+          'wb') as f:
+    pickle.dump(aggregates_dict, f)
 
 def _write_aggregates(model_dir, global_step, eval_tag, aggregates_dict,
                       length_histograms):
@@ -219,6 +229,15 @@ def _write_aggregates(model_dir, global_step, eval_tag, aggregates_dict,
       f.write("%s-P-token,%f,%f,%f\n" %
               (k, v.low.prediction_ratio, v.mid.prediction_ratio,
                v.high.prediction_ratio))
+
+    for k, v in sorted(aggregates_dict[_EXTRACTIVE_METRIC].items()):
+      f.write("%s-coverage,%f,%f,%f\n" %
+              (k, v.low.coverage, v.mid.coverage, v.high.coverage))
+      f.write("%s-density,%f,%f,%f\n" %
+              (k, v.low.density, v.mid.density, v.high.density))
+      f.write("%s-normalized_density,%f,%f,%f\n" %
+              (k, v.low.normalized_density, v.mid.normalized_density, v.high.normalized_density))
+
     for k, v in sorted(aggregates_dict[_LENGTH_METRIC].items()):
       f.write(
           "%s-T,%f,%f,%f\n" %
