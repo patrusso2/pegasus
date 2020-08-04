@@ -308,5 +308,5 @@ def test_transformer(param_overrides):
           "max_output_len": 512,
           "train_steps": 80000,
           "learning_rate": 0.00005, # 0.0001,
-          "batch_size": 4,
+          "batch_size": 1,
       }, param_overrides)
