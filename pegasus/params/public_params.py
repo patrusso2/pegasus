@@ -304,7 +304,7 @@ def test_transformer(param_overrides):
           "train_pattern": save_path+'train.tfrecords',
           "dev_pattern": save_path+'val.tfrecords',
           "test_pattern": save_path+'test.tfrecords',
-          "max_input_len": 1024,
+          "max_input_len": 550,
           "max_output_len": 512,
           "train_steps": 80000,
           "learning_rate": 0.00005, # 0.0001,
