@@ -310,3 +310,18 @@ def test_transformer(param_overrides):
           "learning_rate": 0.00005, # 0.0001,
           "batch_size": 1,
       }, param_overrides)
+
+save_path = "tfrecord:/home/patrick/analysis/googletrends/summarize/pegasus/ckpt/pegasus_ckpt/news_title/"
+@registry.register("news_title")
+def test_transformer(param_overrides):
+  return transformer_params(
+      {
+          "train_pattern": save_path+'train.tfrecords',
+          "dev_pattern": save_path+'val.tfrecords',
+          "test_pattern": save_path+'test.tfrecords',
+          "max_input_len": 550,
+          "max_output_len": 512,
+          "train_steps": 80000,
+          "learning_rate": 0.00005, # 0.0001,
+          "batch_size": 1,
+      }, param_overrides)
