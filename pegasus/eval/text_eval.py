@@ -188,8 +188,12 @@ def text_eval(encoder,
       list_of_text_dicts.append(text_dict)
 
       for key, scorer in scorers_dict.items():
-        scores_i = scorer.score(targets, preds)
-        aggregators_dict[key].add_scores(scores_i)
+        if key == _EXTRACTIVE_METRIC:        
+            scores_i = scorer.score(targets, preds, inputs)
+            aggregators_dict[key].add_scores(scores_i)
+        else:
+            scores_i = scorer.score(targets, preds)
+            aggregators_dict[key].add_scores(scores_i)
 
   aggregates_dict = {k: v.aggregate() for k, v in aggregators_dict.items()}
   length_histograms = scorers_dict[_LENGTH_METRIC].histograms(as_string=True)
@@ -230,13 +234,16 @@ def _write_aggregates(model_dir, global_step, eval_tag, aggregates_dict,
               (k, v.low.prediction_ratio, v.mid.prediction_ratio,
                v.high.prediction_ratio))
 
+    print(aggregates_dict[_EXTRACTIVE_METRIC])
     for k, v in sorted(aggregates_dict[_EXTRACTIVE_METRIC].items()):
-      f.write("%s-coverage,%f,%f,%f\n" %
-              (k, v.low.coverage, v.mid.coverage, v.high.coverage))
-      f.write("%s-density,%f,%f,%f\n" %
-              (k, v.low.density, v.mid.density, v.high.density))
-      f.write("%s-normalized_density,%f,%f,%f\n" %
-              (k, v.low.normalized_density, v.mid.normalized_density, v.high.normalized_density))
+      f.write("%s-T,%f,%f,%f\n" %
+              (k, v.low.target, v.mid.target, v.high.target))
+      f.write("%s-P,%f,%f,%f\n" %
+              (k, v.low.prediction, v.mid.prediction, v.high.prediction))
+      #f.write("%s-,%f,%f,%f\n" %
+      #        (k, v.low, v.mid.density, v.high.density))
+      #f.write("%s-,%f,%f,%f\n" %
+      #        (k, v.low.normalized_density, v.mid.normalized_density, v.high.normalized_density))
 
     for k, v in sorted(aggregates_dict[_LENGTH_METRIC].items()):
       f.write(
@@ -283,3 +290,8 @@ def _write_aggregate_summaries(model_dir, global_step, eval_tag,
           "text_eval/%s-P" % k, v.mid.prediction_length, step=global_step)
       contrib_summary.scalar(
           "text_eval/%s-R" % k, v.mid.relative_length, step=global_step)
+    for k, v in sorted(aggregates_dict[_EXTRACTIVE_METRIC].items()):
+      contrib_summary.scalar(
+          "text_eval/%s-T" % k, v.mid.target, step=global_step)
+      contrib_summary.scalar(
+          "text_eval/%s-P" % k, v.mid.prediction, step=global_step)
